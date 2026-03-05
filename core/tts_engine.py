@@ -34,23 +34,41 @@ class TTSEngine:
                 logger.warning("Failed to initialize Coqui TTS. Please ensure you have 'espeak-ng' installed (`sudo apt-get install espeak-ng` on Debian/Ubuntu, or see your distribution's package manager). Error: %s", e)
                 self.coqui = None
 
+    
+    # def _play_numpy_audio(self, audio: np.ndarray, sr: int):
+    #     try:
+    #         sd.play(audio, samplerate=sr)
+    #         sd.wait()
+    #     except Exception as e:
+    #         logger.debug("sounddevice playback failed: %s", e)
+    #         tmp = "last_audio.wav"
+    #         sf.write(tmp, audio, sr)
+    #         self.last_audio_path = tmp
+    #         try:
+    #             if os.name == "nt":
+    #                 os.startfile(tmp)
+    #             else:
+    #                 subprocess.Popen(["xdg-open", tmp])
+    #         except Exception:
+    #             pass
+
     def _play_numpy_audio(self, audio: np.ndarray, sr: int):
         try:
+            print("Playing audio with sounddevice...")
             sd.play(audio, samplerate=sr)
             sd.wait()
         except Exception as e:
-            logger.debug("sounddevice playback failed: %s", e)
+            print("Sounddevice failed:", e)
+
             tmp = "last_audio.wav"
             sf.write(tmp, audio, sr)
             self.last_audio_path = tmp
-            try:
-                if os.name == "nt":
-                    os.startfile(tmp)
-                else:
-                    subprocess.Popen(["xdg-open", tmp])
-            except Exception:
-                pass
 
+            try:
+                subprocess.run(["aplay", tmp])
+            except Exception as e2:
+                print("Fallback aplay failed:", e2)
+    
     def speak(self, text: str, voice: Optional[str] = "p335", speed: float = 1.0, volume: float = 0.9):
         if not text:
             return
@@ -66,10 +84,25 @@ class TTSEngine:
                     self.last_audio_path = audio
                     data, sr = sf.read(audio, dtype="float32")
                     self._play_numpy_audio(data, sr)
+                # elif isinstance(audio, np.ndarray):
+                #     self._play_numpy_audio(audio, sr)
+                # else:
+                #     logger.warning("Coqui returned unexpected audio type: %s", type(audio))
+
+
+                elif isinstance(audio, list):
+                    audio = np.array(audio, dtype=np.float32)
+                    self._play_numpy_audio(audio, sr)
+
                 elif isinstance(audio, np.ndarray):
                     self._play_numpy_audio(audio, sr)
+
                 else:
-                    logger.warning("Coqui returned unexpected audio type: %s", type(audio))
+                    logger.warning("Unsupported audio type from Coqui: %s", type(audio))
+
+
+
+
             except Exception as e:
                 logger.warning("Coqui playback failed, falling back: %s", e)
                 self._espeak(text, speed, volume, voice)

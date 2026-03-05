@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
     },
     "tts": {
         "engine": "coqui",         # coqui or espeak
-        "coqui_model": "tts_models/en/vctk/vits",
+        "coqui_model": "tts_models/en/ljspeech/tacotron2-DDC",
         "voice": "p335",        # speaker / voice for coqui
         "speed": 1.0,
         "volume": 0.9

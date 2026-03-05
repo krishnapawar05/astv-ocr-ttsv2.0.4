@@ -105,8 +105,12 @@ class AssistivePipeline:
         cap.release()
 
     def _process_loop(self):
-        min_len = int(self.cfg["ocr"].get("min_text_len", 3))
-        min_conf = float(self.cfg["ocr"].get("min_confidence", 0.5))
+        #min_len = int(self.cfg["ocr"].get("min_text_len", 3))
+        #min_conf = float(self.cfg["ocr"].get("min_confidence", 0.5))
+
+        min_len = 1
+        min_conf = 0.0
+        
         last_text = ""
         last_time = 0
         frame_count = 0
@@ -120,6 +124,13 @@ class AssistivePipeline:
                 frame_count += 1
                 ocr_res: OCRResult = self.ocr.extract_text(frame)
                 text = (ocr_res.text or "").strip()
+
+                print("OCR DETECTED:", text, "CONF:", ocr_res.confidence)
+
+
+
+
+
 
                 if not text or len(text) < min_len:
                     continue
@@ -146,6 +157,8 @@ class AssistivePipeline:
                 last_text = text
                 last_time = now
                 self.last_text = text
+
+                print("Sending to TTS:", text)
                 self.text_q.put(text)
                 
             except queue.Empty:
@@ -157,6 +170,7 @@ class AssistivePipeline:
         while self.running:
             try:
                 text = self.text_q.get(timeout=0.5)
+                print("TTS RECEIVED:", text)
                 if text is None:
                     break
                 self.tts.speak(
